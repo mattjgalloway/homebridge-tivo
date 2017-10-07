@@ -1,0 +1,26 @@
+{
+  "name": "homebridge-tivo",
+  "version": "0.0.1",
+  "description": "Homebridge plugin for TiVo set top boxes.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattjgalloway/homebridge-tivo.git"
+  },
+  "keywords": [
+    "homebridge",
+    "homebridge-plugin",
+    "tivo",
+    "tv"
+  ],
+  "author": "Matt Galloway",
+  "license": "MIT",
+  "engines": {
+    "homebridge": ">=0.4.0",
+    "node": ">=0.12.0"
+  },
+  "dependencies": {}
+}
