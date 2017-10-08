@@ -97,7 +97,7 @@ TiVoAccessory.prototype._setOn = function(on, callback) {
             callback(null);
         });
     } else {
-        accessory.remote.sendCommand('IRCODE STANDBY', fucntion(done) {
+        accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
             if (!done) {
                 callback(null);
                 return;
