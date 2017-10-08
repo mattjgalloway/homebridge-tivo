@@ -1,6 +1,9 @@
 "use strict";
+
 var net = require('net');
-var inherits = require('util').inherits;
+var util = require('util');
+
+var TiVoRemote = require('./TiVoRemote.js');
 
 var Service, Characteristic, ChannelCharacteristic;
 
@@ -12,13 +15,37 @@ module.exports = function(homebridge) {
 }
 
 function TiVoAccessory(log, config) {
+    var that = this;
+
     this.log = log;
     this.config = config;
     this.name = config['name'];
-    this.ip = config['ip'];
-    this.port = config['port'];
 
-    this.remote = new TiVoRemote(this.ip, this.port);
+    this.channel = 0;
+    this.on = false;
+
+    var remote = new TiVoRemote({
+        ip: config['ip'],
+        port: config['port']
+    });
+    remote.on('channel', function(channel) {
+        that.log.debug('Channel is now: ' + channel); 
+        that.channel = channel;
+        that.on = true;
+    });
+    remote.on('connecting', function() {
+        that.log.debug('Connecting');
+    });
+    remote.on('connect', function() {
+        that.log.debug('Connected');
+    });
+    remote.on('disconnect', function() {
+        that.log.debug('Disconnected');
+    });
+    remote.on('error', function(error) {
+        that.log.error('Error: ' + error);
+    });
+    this.remote = remote;
 
     this.service = new Service.Switch(this.name);
     this.service
@@ -42,7 +69,7 @@ function makeChannelCharacteristic() {
         this.value = "1";
     };
 
-    inherits(ChannelCharacteristic, Characteristic);
+    util.inherits(ChannelCharacteristic, Characteristic);
 }
 
 TiVoAccessory.prototype.getServices = function() {
@@ -57,71 +84,45 @@ TiVoAccessory.prototype.getServices = function() {
 
 TiVoAccessory.prototype._getOn = function(callback) {
     var accessory = this;
-    accessory.remote.getStatus(function(status) {
-        callback(null, status.split(" ")[0] == "CH_STATUS");
-    });
+    callback(null, accessory.on);
 };
 
 TiVoAccessory.prototype._setOn = function(on, callback) {
     var accessory = this;
     if (on) {
-        accessory.remote.sendCommand('IRCODE STANDBY', function() {
+        accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
+            if (done) {
+                accessory.on = true;
+            }
             callback(null);
         });
     } else {
-        accessory.remote.sendCommand('IRCODE STANDBY', function() {
-            accessory.remote.sendCommand('IRCODE STANDBY', function() {
+        accessory.remote.sendCommand('IRCODE STANDBY', fucntion(done) {
+            if (!done) {
                 callback(null);
-            });
+                return;
+            }
+
+            setTimeout(function() {
+                accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
+                    if (done) {
+                        accessory.on = false;
+                    }
+                    callback(null);
+                });
+            }, 1000);
         });
     }
 };
 
 TiVoAccessory.prototype._getChannel = function(callback) {
     var accessory = this;
-    accessory.remote.getStatus(function(status) {
-        var split = status.split(" ");
-        var channel = parseInt(split[1], 10);
-        callback(null, channel);
-    });
+    callback(null, accessory.channel);
 }
 
 TiVoAccessory.prototype._setChannel = function(channel, callback) {
     var accessory = this;
-    accessory.remote.sendCommand('SETCH ' + channel, function() {
+    accessory.remote.sendCommand('SETCH ' + channel, function(done) {
         callback(null);
     });
-}
-
-class TiVoRemote {
-    constructor(ip, port) {
-        this.ip = ip
-        this.port = port
-    }
-
-    getStatus(callback) {
-        var client = new net.Socket();
-        client.connect(this.port, this.ip, function() {});
-
-        var data = "";
-        client.on('data', function(d) {
-            data += d;
-            if (data.includes("\r")) {
-                callback(data.split("\r")[0]);
-                client.destroy();
-            }
-        });
-        client.on('error', function(d) {
-            callback(null);
-        });
-    }
-
-    sendCommand(command, callback) {
-        var client = new net.Socket();
-        client.connect(this.port, this.ip, function() {
-            client.write(command + '\r');
-            client.destroy();
-            callback(null);
-        });
-    }
 }
