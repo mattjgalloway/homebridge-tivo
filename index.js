@@ -3,7 +3,7 @@
 var net = require('net');
 var util = require('util');
 
-var TiVoRemote = require('./TiVoRemote.js');
+var tivo = require('./TiVoConnection');
 
 var Service, Characteristic, ChannelCharacteristic;
 
@@ -21,31 +21,10 @@ function TiVoAccessory(log, config) {
     this.config = config;
     this.name = config['name'];
 
-    this.channel = 0;
-    this.on = false;
-
-    var remote = new TiVoRemote({
+    var tivoConfig = {
         ip: config['ip'],
         port: config['port']
-    });
-    remote.on('channel', function(channel) {
-        that.log.debug('Channel is now: ' + channel); 
-        that.channel = channel;
-        that.on = true;
-    });
-    remote.on('connecting', function() {
-        that.log.debug('Connecting');
-    });
-    remote.on('connect', function() {
-        that.log.debug('Connected');
-    });
-    remote.on('disconnect', function() {
-        that.log.debug('Disconnected');
-    });
-    remote.on('error', function(error) {
-        that.log.error('Error: ' + error);
-    });
-    this.remote = remote;
+    };
 
     this.service = new Service.Switch(this.name);
     this.service
@@ -84,45 +63,43 @@ TiVoAccessory.prototype.getServices = function() {
 
 TiVoAccessory.prototype._getOn = function(callback) {
     var accessory = this;
-    callback(null, accessory.on);
+    tivo.sendCommands(accessory.tivoConfig, [], function(responses) {
+        callback(null, responses.length > 0);
+    });
 };
 
 TiVoAccessory.prototype._setOn = function(on, callback) {
     var accessory = this;
+    var commands = null;
     if (on) {
-        accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
-            if (done) {
-                accessory.on = true;
-            }
-            callback(null);
-        });
+        commands = ['IRCODE STANDBY'];
     } else {
-        accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
-            if (!done) {
-                callback(null);
-                return;
-            }
-
-            setTimeout(function() {
-                accessory.remote.sendCommand('IRCODE STANDBY', function(done) {
-                    if (done) {
-                        accessory.on = false;
-                    }
-                    callback(null);
-                });
-            }, 1000);
-        });
+        commands = ['IRCODE STANDBY', 'IRCODE STANDBY'];
     }
+    tivo.sendCommands(accessory.tivoConfig, commands, function(responses) {
+        setTimeout(function() {
+            tivo.sendCommands(accessory.tivoConfig, [], function(responses) {
+                var completed = on ? responses.length > 0 : responses.length == 0;
+                callback(completed ? null : "Failed");
+            });
+        }, 5000);
+    });
 };
 
 TiVoAccessory.prototype._getChannel = function(callback) {
     var accessory = this;
-    callback(null, accessory.channel);
+    tivo.sendCommands(accessory.tivoConfig, [], function(responses) {
+        var lastResponse = responses.pop();
+        if (typeof lastResponse === 'undefined') {
+            callback("Failed");
+        }
+        callback(null, lastResponse.channel);
+    });
 }
 
 TiVoAccessory.prototype._setChannel = function(channel, callback) {
     var accessory = this;
-    accessory.remote.sendCommand('SETCH ' + channel, function(done) {
-        callback(null);
+    tivo.sendCommands(accessory.tivoConfig, ['SETCH ' + channel], function(responses) {
+        callback(responses.length > 1 ? null : "Failed");
     });
 }
