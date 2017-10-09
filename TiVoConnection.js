@@ -7,13 +7,15 @@ const TiVoConstants = {
     ResponseType: {
         CH_STATUS: "CH_STATUS",
         CH_FAILED: "CH_FAILED",
+        LIVETV_READY: "LIVETV_READY",
+        MISSING_TELEPORT_NAME: "MISSING_TELEPORT_NAME",
     },
     ChannelStatusReason: {
         LOCAL: "LOCAL",
         REMOTE: "REMOTE",
         RECORDING: "RECORDING",
     },
-    FailedReason: {
+    ChannelSetFailureReason: {
         NO_LIVE: "NO_LIVE",
         MISSING_CHANNEL: "MISSING_CHANNEL",
         MALFORMED_CHANNEL: "MALFORMED_CHANNEL",
@@ -62,6 +64,29 @@ var TiVoConnection = function(config, commands, callback) {
         that.sendNextCommand();
     });
 
+    var parseResponseMessage = function(message) {
+        var response = {
+            raw: message,
+        };
+        var split = message.split(" ");
+        var type = split[0];
+        switch (type) {
+            case TiVoConstants.ResponseType.CH_STATUS:
+                response.channel = split[1];
+                response.channelStatusReason = split[split.length - 1];
+                if (split.length == 4) {
+                    response.subChannel = split[2];
+                }
+                break;
+            case TiVoConstants.ResponseType.CH_FAILED:
+                response.reason = split[1];
+                break;
+            default:
+                break;
+        }
+        return response;
+    };
+
     var data = "";
     client.on('data', function(d) {
         data += d;
@@ -71,7 +96,7 @@ var TiVoConnection = function(config, commands, callback) {
             if (newline > -1) {
                 var thisData = data.slice(0, newline);
                 data = data.slice(newline + 1);
-                responses.push(thisData);
+                responses.push(parseResponseMessage(thisData));
             } else {
                 break;
             }
