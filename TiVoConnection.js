@@ -38,25 +38,34 @@ var TiVoConnection = function(config, commands, callback) {
     var responses = [];
 
     var attempts = config.attempts;
-    this.connect = function() {
+    this.attemptConnect = function() {
         if (!connected && attempts > 0) {
             setTimeout(function() {
-                client.connect(config.port, config.ip);
+                that.connect();
             }, 1000);
             attempts--;
             return true;
         } else {
             return false;
         }
-    };
-    client.on('close', function() {
-        if (!that.connect()) {
-            callback(responses);
+    }
+
+    this.connect = function() {
+        if (connected) {
+            return;
+        }
+        client.connect(config.port, config.ip);
+    }
+
+    client.on('close', function(hadError) {
+        if (hadError) return;
+        if (!that.attemptConnect()) {
+            callback(responses, null);
         }
     });
-    client.on('error', function() {
-        if (!that.connect()) {
-            callback(responses);
+    client.on('error', function(error) {
+        if (!that.attemptConnect()) {
+            callback(responses, error);
         }
     });
     client.on('connect', function() {
