@@ -21,7 +21,7 @@ function TiVoAccessory(log, config) {
     this.config = config;
     this.name = config['name'];
 
-    var tivoConfig = {
+    this.tivoConfig = {
         ip: config['ip'],
         port: config['port']
     };
@@ -92,8 +92,9 @@ TiVoAccessory.prototype._getChannel = function(callback) {
         var lastResponse = responses.pop();
         if (typeof lastResponse === 'undefined') {
             callback("Failed");
+        } else {
+            callback(null, lastResponse.channel);
         }
-        callback(null, lastResponse.channel);
     });
 }
 
