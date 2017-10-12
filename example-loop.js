@@ -1,8 +1,13 @@
 var TiVoRemote = require('./TiVoRemote');
 var readline = require('readline');
 
+if (process.argv.length < 3) {
+  console.log('Usage: <script> <ip>');
+  process.exit(1);
+}
+
 var config = {
-  ip: '192.168.1.100',
+  ip: process.argv[2],
   port: 31339
 }
 var remote = new TiVoRemote(config);
