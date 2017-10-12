@@ -36,6 +36,7 @@ var TiVoConnection = function(config, commands, callback) {
     var connected = false;
     var commandsToSend = commands;
     var responses = [];
+    var errors = [];
 
     var attempts = config.attempts;
     this.attemptConnect = function() {
@@ -55,6 +56,7 @@ var TiVoConnection = function(config, commands, callback) {
             return;
         }
         client.connect(config.port, config.ip);
+        client.setTimeout(10000);
     }
 
     client.on('close', function(hadError) {
@@ -64,13 +66,17 @@ var TiVoConnection = function(config, commands, callback) {
         }
     });
     client.on('error', function(error) {
+        errors.push(error);
         if (!that.attemptConnect()) {
-            callback(responses, error);
+            callback(responses, [errors]);
         }
     });
     client.on('connect', function() {
         connected = true;
         that.sendNextCommand();
+    });
+    client.on('timeout', function() {
+        client.destroy();
     });
 
     var parseResponseMessage = function(message) {
