@@ -14,6 +14,9 @@ var remote = new TiVoRemote(config);
 
 var rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 rl.setPrompt('');
+rl.on('SIGINT', function() {
+  process.exit(0);
+});
 
 remote.on('channel', function(channel) { console.log('Channel is now: ' + channel); });
 remote.on('on', function(on) { console.log('On state is now: ' + on); });
