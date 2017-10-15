@@ -23,6 +23,7 @@ remote.on('on', function(on) { console.log('On state is now: ' + on); });
 remote.on('connecting', function() { console.log('Connecting'); });
 remote.on('connect', function() { console.log('Connected'); rl.prompt(); });
 remote.on('disconnect', function() { console.log('Disconnected'); });
+remote.on('error', function(err) { console.log('Error: ' + err); });
 
 rl.on('line', function(cmd) {
   remote.sendCommand(cmd);
