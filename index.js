@@ -3,7 +3,7 @@
 var net = require('net');
 var util = require('util');
 
-var tivo = require('./TiVoConnection');
+var tivo = require('node-tivo');
 
 var Service, Characteristic, ChannelCharacteristic;
 
